@@ -2,35 +2,38 @@
 import inspect
 import os
 import random
-from collections import defaultdict, deque
-from contextlib import contextmanager, nullcontext
-from copy import deepcopy
-from enum import Enum
-from typing import Dict, Optional, Union
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import trl
 from accelerate.utils import gather_object, is_peft_model
+from collections import defaultdict, deque
+from contextlib import contextmanager, nullcontext
+from copy import deepcopy
+from enum import Enum
 from packaging import version
 from transformers import PreTrainedModel
-from trl import GKDTrainer as HFGKDTrainer
 from trl import SFTTrainer as HFSFTTrainer
+from typing import Dict, Optional, Union
 
 from swift.template import TemplateInputs
 from swift.trainers import SwiftMixin, disable_gradient_checkpointing
 from swift.utils import (JsonlWriter, get_logger, is_swanlab_available, is_wandb_available, remove_response, to_device,
                          unwrap_model_for_generation)
 from .rollout_mixin import DataType, RolloutTrainerMixin
-from .utils import (get_gather_if_zero3_context, identity_data_collator, patch_profiling_context,
-                    patch_profiling_decorator, prepare_deepspeed)
+from .utils import (get_gather_if_zero3_context, identity_data_collator, prepare_deepspeed, profiling_context,
+                    profiling_decorator)
 
 try:
     from liger_kernel.chunked_loss import LigerFusedLinearJSDLoss
     _liger_kernel_available = True
 except ImportError:
     _liger_kernel_available = False
+
+if version.parse(trl.__version__) >= version.parse('0.26.0'):
+    from trl.experimental.gkd import GKDTrainer as HFGKDTrainer
+else:
+    from trl import GKDTrainer as HFGKDTrainer
 
 del HFGKDTrainer.__init__
 del HFSFTTrainer.__init__
@@ -149,7 +152,7 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         inputs['position_ids'] = new_position_ids
         return generated_tokens, new_attention_mask, new_labels
 
-    @patch_profiling_decorator
+    @profiling_decorator
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         # Get data source: DataSource.STUDENT, DataSource.TEACHER, or DataSource.DATASET
         data_source = inputs.pop('_data_source', DataSource.DATASET)
@@ -303,7 +306,7 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         return batch_encoded
 
     # Code borrowed from huggingface/trl
-    @patch_profiling_decorator
+    @profiling_decorator
     def training_step(self,
                       model: nn.Module,
                       inputs: DataType,
@@ -318,7 +321,7 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         When use_vllm is enabled, vLLM engine is used for faster generation.
         """
         args = self.args
-        with patch_profiling_context(self, 'get_completions'):
+        with profiling_context(self, 'get_completions'):
             if self._get_random_num() <= self.lmbda:
                 # On-policy: student model generates responses
                 data_source = DataSource.STUDENT

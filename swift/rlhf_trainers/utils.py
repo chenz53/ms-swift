@@ -1,21 +1,18 @@
 # Copyright (c) ModelScope Contributors. All rights reserved.
+import datasets
 import functools
 import ipaddress
 import math
 import os
 import socket
 import time
+import torch
+import torch.nn.functional as F
 from contextlib import contextmanager, nullcontext
 from dataclasses import asdict
 from datetime import timedelta
 from functools import partial
 from io import BytesIO
-from types import MethodType
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
-
-import datasets
-import torch
-import torch.nn.functional as F
 from msgspec import field
 from packaging import version
 from peft.tuners import lora
@@ -24,6 +21,8 @@ from PIL import Image
 from pydantic import BaseModel, field_validator
 from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
+from types import MethodType
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from swift.template import Messages
 from swift.tuners.lora import LoraConfig
@@ -37,7 +36,6 @@ if is_swanlab_available():
 
 T = TypeVar('T')
 
-TensorLoRARequest = None
 _ipv6_patch_applied = False
 
 if is_vllm_available():
@@ -55,6 +53,28 @@ if is_vllm_available():
         @property
         def embeddings(self):
             return self.lora_embeddings
+else:
+    TensorLoRARequest = None
+
+
+def chunk_list(lst: list, n: int) -> list[list]:
+    """
+    Split list `lst` into `n` evenly distributed sublists.
+
+    Example:
+    ```python
+    >>> chunk_list([1, 2, 3, 4, 5, 6], 2)
+    [[1, 2, 3], [4, 5, 6]]
+
+    >>> chunk_list([1, 2, 3, 4, 5, 6], 4)
+    [[1, 2], [3, 4], [5], [6]]
+
+    >>> chunk_list([1, 2, 3, 4, 5, 6], 8)
+    [[1], [2], [3], [4], [5], [6], [], []]
+    ```
+    """
+    k, r = divmod(len(lst), n)
+    return [lst[i * k + min(i, r):(i + 1) * k + min(i + 1, r)] for i in range(n)]
 
 
 def is_valid_ipv6_address(address: str) -> bool:
@@ -269,9 +289,9 @@ def prepare_deepspeed(model, accelerator, deepspeed_config=None, deepspeed_plugi
     try:
         import deepspeed
         import os
+        from accelerate.utils import DeepSpeedPlugin
         from copy import deepcopy
         from transformers.integrations.deepspeed import HfTrainerDeepSpeedConfig
-        from accelerate.utils import DeepSpeedPlugin
     except ImportError:
         pass
 
@@ -538,7 +558,7 @@ def patch_lora_unmerge(model):
 
 
 @contextmanager
-def patch_profiling_context(trainer, name: str):
+def profiling_context(trainer, name: str):
     start_time = time.perf_counter()
     yield
     end_time = time.perf_counter()
@@ -553,11 +573,11 @@ def patch_profiling_context(trainer, name: str):
         swanlab.log(profiling_metrics)
 
 
-def patch_profiling_decorator(func):
+def profiling_decorator(func):
 
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        with patch_profiling_context(self, func.__name__):
+        with profiling_context(self, func.__name__):
             return func(self, *args, **kwargs)
 
     return wrapper
@@ -1335,7 +1355,6 @@ def set_expandable_segments(enable: bool) -> None:
         >>> set_expandable_segments(True)  # Enable to help with OOM issues
         >>> set_expandable_segments(False) # Disable for more predictable memory usage
     """
-    global _EXPANDABLE_SEGMENTS_SET
     if not _EXPANDABLE_SEGMENTS_SET:
         return
     if torch.cuda.is_available():

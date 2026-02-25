@@ -1,15 +1,14 @@
 # Copyright (c) ModelScope Contributors. All rights reserved.
-from dataclasses import dataclass, field
-from functools import partial
-from typing import Any, Dict, List, Literal, Optional
-
 import torch
 import torch.nn.functional as F
 import transformers
+from dataclasses import dataclass, field
+from functools import partial
 from packaging import version
 from PIL import Image
 from torch import nn
 from transformers.integrations import is_deepspeed_zero3_enabled
+from typing import Any, Dict, List, Literal, Optional
 
 from swift.utils import get_env_args, get_packed_seq_params, is_deepspeed_enabled, to_float_dtype
 from ..base import Template
@@ -562,7 +561,12 @@ class Qwen3_5Template(Qwen3VLTemplate):
 
 register_template(
     QwenTemplateMeta(
-        MLLMTemplateType.qwen3_5, template_cls=Qwen3_5Template, default_system=None, thinking_prefix='<think>\n'))
+        MLLMTemplateType.qwen3_5,
+        template_cls=Qwen3_5Template,
+        default_system=None,
+        thinking_prefix='<think>\n',
+        non_thinking_prefix='<think>\n\n</think>\n\n',
+        is_thinking=True))
 
 
 class Qwen3VLEmbTemplate(Qwen3VLTemplate):
