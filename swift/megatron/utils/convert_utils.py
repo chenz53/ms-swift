@@ -6,6 +6,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from contextlib import contextmanager
 from megatron.core import mpu
+from megatron.core.tensor_parallel import VocabParallelEmbedding
 from typing import Any, Dict
 
 from swift.utils import HfConfigFactory, get_logger, to_device, to_float_dtype
@@ -65,6 +66,9 @@ def _model_cpu_forward_context(modules,
         origin_torch_dtype = next(modules[0].parameters()).dtype
     except StopIteration:
         origin_torch_dtype = next(modules[-1].parameters()).dtype
+    embeddings = None
+    if share_embedding:
+        embeddings = [module for module in modules if isinstance(module, (nn.Embedding, VocabParallelEmbedding))]
 
     def _to_cuda_hook(module, args):
         if compute_device is not None or torch_dtype is not None:
@@ -73,7 +77,7 @@ def _model_cpu_forward_context(modules,
         return args
 
     def _to_cpu_hook(module, args, output):
-        if share_embedding and module is modules[0]:
+        if share_embedding and module in embeddings:
             return
         module.to(device=target_device, dtype=origin_torch_dtype)
 
@@ -142,13 +146,38 @@ def get_examples(is_multimodal: bool) -> Dict[str, Any]:
     return data
 
 
+def broadcast_mg_logits(mg_logits=None, src_rank=None):
+    if not dist.is_initialized():
+        return
+    rank = dist.get_rank()
+    if src_rank is None:
+        src_rank = dist.get_world_size() - 1
+    if rank == src_rank:
+        meta = [tuple(mg_logits.shape), str(mg_logits.dtype).split('.', 1)[1]]
+    else:
+        meta = [None, None]
+
+    dist.broadcast_object_list(meta, src=src_rank)
+    shape, dtype = meta
+    dtype = getattr(torch, dtype)
+
+    if rank != src_rank:
+        mg_logits = torch.empty(shape, dtype=dtype, device='cuda')
+
+    dist.broadcast(mg_logits, src=src_rank)
+
+    return mg_logits
+
+
 def test_convert_precision(args, hf_model, mg_model, template, test_convert_dtype=None):
     if test_convert_dtype is None:
         test_convert_dtype = getattr(args, 'test_convert_dtype', torch.float32)
     template.set_mode('train')
     _test_params_sum(mg_model)
 
-    is_multimodal = template.model_meta.is_multimodal
+    config = mg_model.config
+    is_multimodal = config.is_multimodal
+    support_multimodal = is_multimodal and getattr(config, 'support_multimodal', True)
     mg_language_model = mg_model.language_model if is_multimodal else mg_model
     if mg_language_model.config.fp8 is not None:
         raise ValueError('fp8 models currently do not support testing convert_precision. '
@@ -158,10 +187,10 @@ def test_convert_precision(args, hf_model, mg_model, template, test_convert_dtyp
         hf_model.eval()
         if dist.get_world_size() == 1:
             _test_params_sum(hf_model)
-        inputs = template.encode(get_examples(is_multimodal))
+        inputs = template.encode(get_examples(support_multimodal))
         hf_inputs = to_device(template.data_collator([inputs]), 'cuda')
         template.register_post_encode_hook([hf_model])
-        HfConfigFactory.set_model_config_attr(hf_model, 'use_cache', False)
+        HfConfigFactory.set_config_attr(hf_model.config, 'use_cache', False)
         model_arch = hf_model.model_meta.model_arch
         ignore_modules = (model_arch.vision_tower + model_arch.aligner) if is_multimodal else []
         hf_modules = _find_modules(hf_model, ignore_modules=ignore_modules)
@@ -173,7 +202,7 @@ def test_convert_precision(args, hf_model, mg_model, template, test_convert_dtyp
         hf_model.to('cpu')
 
     template.use_megatron = True
-    inputs = template.encode(get_examples(is_multimodal))
+    inputs = template.encode(get_examples(support_multimodal))
     mg_inputs = to_device(template.data_collator([inputs], padding_to=get_padding_to(args)), 'cuda')
     packed_seq_params = None
     mg_model.eval()
@@ -190,17 +219,19 @@ def test_convert_precision(args, hf_model, mg_model, template, test_convert_dtyp
     mg_dtype = _param.dtype
     mg_device = _param.device
     if args.model_type == 'minimax_m2':
-        # router to bfloat16
+        # router to bfloat16 (expert_bias). No need to do this when actually training.
         for n, m in mg_language_model.named_modules():
             if n.endswith('router'):
                 m.to(mg_dtype)
     with torch.inference_mode(), _model_cpu_forward_context(
             mg_modules, test_convert_dtype, 'cuda', share_embedding=share_embedding, target_device=mg_device):
-        mg_logits = forward_step_helper(args, mg_model, mg_inputs, dtype=test_convert_dtype)
+        mg_logits = forward_step_helper(mg_model, mg_inputs, dtype=test_convert_dtype)
         if args.tensor_model_parallel_size > 1 and args.task_type != 'seq_cls':
             from megatron.core.tensor_parallel.mappings import gather_from_tensor_model_parallel_region
             if mg_logits is not None:
                 mg_logits = gather_from_tensor_model_parallel_region(mg_logits)
+
+    mg_logits = broadcast_mg_logits(mg_logits)
     if hf_model is None:
         return
     if args.task_type == 'seq_cls':

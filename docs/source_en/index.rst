@@ -45,15 +45,17 @@ Swift DOCUMENTATION
    Megatron-SWIFT/GRPO.md
    Megatron-SWIFT/GKD.md
    Megatron-SWIFT/Ascend.md
+   Megatron-SWIFT/Custom-Model.md
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Customization
 
+   Customization/Architecture.md
    Customization/Custom-model.md
    Customization/Custom-dataset.md
-   Customization/Pluginization.md
+
 
 
 .. toctree::
@@ -65,11 +67,14 @@ Swift DOCUMENTATION
    BestPractices/GRPO-Code-Training.md
    BestPractices/Qwen3-Best-Practice.md
    BestPractices/Qwen3-VL-Best-Practice.md
+   BestPractices/Qwen3_5-Best-Practice.md
    BestPractices/MLLM-Registration.md
    BestPractices/Embedding.md
    BestPractices/Reranker.md
    BestPractices/Rapidly-Training-VL-model.md
    BestPractices/NPU-support.md
+   BestPractices/Metax-support.md
+   BestPractices/AMD-support.md
    BestPractices/More-Best-Practices.md
 
 Indices and tables

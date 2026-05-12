@@ -77,7 +77,7 @@ class TrainArgumentsMixin:
         loss_type (Optional[str]): Custom loss_type name. Default is None, uses the model's built-in loss function.
             Available loss options can be found in `loss/mapping.py`
         metric (Optional[str]): Custom eval metric name. Default is None. Available eval_metric options can be found
-            in `eval_metric/mapping.py`.
+            in `metrics/mapping.py`.
         callbacks (List[str]): Custom trainer callbacks, default is `[]`. Available callbacks can be found
             in `callbacks/mapping.py`.
         early_stop_interval (Optional[int]): The interval for early stopping. Training will be terminated if the
@@ -135,6 +135,8 @@ class TrainArgumentsMixin:
     router_aux_loss_coef: float = 0.
     enable_dft_loss: bool = False  # https://arxiv.org/abs/2508.05629
     enable_channel_loss: bool = False
+    safe_serialization: bool = True
+    max_shard_size: str = '5GB'
 
     weight_decay: float = 0.1
     adam_beta2: float = 0.95

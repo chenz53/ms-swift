@@ -25,6 +25,14 @@ class HfConfigFactory:
         return torch_dtype
 
     @staticmethod
+    def get_text_config(config):
+        for key in HfConfigFactory.llm_keys:
+            value = getattr(config, key, None)
+            if value is not None:
+                return value
+        return config
+
+    @staticmethod
     def _get_config_attrs(config: Union[PretrainedConfig, Dict[str, Any]],
                           attr_name: str,
                           include_vit: bool = False,
@@ -101,12 +109,6 @@ class HfConfigFactory:
             else:
                 setattr(config, attr_name, value)
         return len(attrs)
-
-    @staticmethod
-    def set_model_config_attr(model, attr_name: str, value: Any) -> None:
-        for module in model.modules():
-            if getattr(module, 'config', None) and getattr(module.config, attr_name, value) != value:
-                setattr(module.config, attr_name, value)
 
     @staticmethod
     def get_max_model_len(config: Union[PretrainedConfig, Dict[str, Any]]) -> Optional[int]:

@@ -140,7 +140,7 @@ class DeepseekV32Loader(ModelLoader):
             from transformers.models.deepseek_v32 import DeepseekV32ForCausalLM
         except ImportError:
             # It’s only for compatibility with Megatron training or vllm/sglang infer,
-            # while we wait for Transformers to support deepseek_v3_2.
+            # while we wait for Transformers to support deepseek_v32.
             from transformers.models.deepseek_v3 import DeepseekV3ForCausalLM as DeepseekV32ForCausalLM
             if not self.return_dummy_model:
                 raise ValueError('DeepSeek-V3.2 is not supported in transformers.')
@@ -150,7 +150,7 @@ class DeepseekV32Loader(ModelLoader):
 
 register_model(
     ModelMeta(
-        LLMModelType.deepseek_v3_2,
+        LLMModelType.deepseek_v32,
         [
             ModelGroup([
                 Model('deepseek-ai/DeepSeek-V3.2', 'deepseek-ai/DeepSeek-V3.2'),
@@ -163,6 +163,23 @@ register_model(
         DeepseekV32Loader,
         template=TemplateType.deepseek_v3_1,
         architectures=['DeepseekV32ForCausalLM'],
+    ))
+
+register_model(
+    ModelMeta(
+        LLMModelType.deepseek_v4,
+        [
+            ModelGroup([
+                Model('deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Flash'),
+                Model('deepseek-ai/DeepSeek-V4-Flash-Base', 'deepseek-ai/DeepSeek-V4-Flash-Base'),
+            ]),
+            ModelGroup([
+                Model('deepseek-ai/DeepSeek-V4-Pro', 'deepseek-ai/DeepSeek-V4-Pro'),
+                Model('deepseek-ai/DeepSeek-V4-Pro-Base', 'deepseek-ai/DeepSeek-V4-Pro-Base'),
+            ]),
+        ],
+        template=TemplateType.deepseek_v4,
+        architectures=['DeepseekV4ForCausalLM'],
     ))
 
 

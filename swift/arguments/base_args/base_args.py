@@ -1,6 +1,7 @@
 # Copyright (c) ModelScope Contributors. All rights reserved.
 import json
 import os
+import shutil
 from dataclasses import dataclass, field, fields
 from packaging import version
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -49,6 +50,7 @@ class BaseArguments(GenerationArguments, QuantizeArguments, DataArguments, Templ
         model_kwargs (Optional[str]): Additional keyword arguments for specific models, passed as a JSON string
             (e.g., '{"key": "value"}'). It's recommended to use the same arguments for inference as for training.
             Default is None.
+        enable_npu_model_patch (bool): Whether to enable model-related NPU patches. Default is True.
         load_args (bool): Whether to load `args.json` from a checkpoint when using `--resume_from_checkpoint`,
             `--model`, or `--adapters`. Defaults to True for inference/export and False for training. Usually,
             this does not need to be modified. Default is True.
@@ -70,7 +72,6 @@ class BaseArguments(GenerationArguments, QuantizeArguments, DataArguments, Templ
     """
     tuner_backend: Literal['peft', 'unsloth'] = 'peft'
     tuner_type: str = field(default='lora', metadata={'help': f'tuner_type choices: {list(get_supported_tuners())}'})
-    train_type: Optional[str] = None  # compat swift3.x
     adapters: List[str] = field(default_factory=list)
     external_plugins: List[str] = field(default_factory=list)
     # This parameter is kept for swift3.x compatibility. Please use `external_plugins` as a replacement.
@@ -78,6 +79,7 @@ class BaseArguments(GenerationArguments, QuantizeArguments, DataArguments, Templ
 
     seed: int = 42
     model_kwargs: Optional[Union[dict, str]] = None
+    enable_npu_model_patch: bool = True
     load_args: bool = True
     load_data_args: bool = False
     # dataset
@@ -148,9 +150,6 @@ class BaseArguments(GenerationArguments, QuantizeArguments, DataArguments, Templ
         ]
 
     def __post_init__(self):
-        if self.train_type is not None:
-            logger.warning('`train_type` is deprecated, please use `tuner_type` instead.')
-            self.tuner_type = self.train_type
         self.swift_version = swift.__version__
         if self.use_hf or use_hf_hub():
             self.use_hf = True
@@ -288,6 +287,9 @@ class BaseArguments(GenerationArguments, QuantizeArguments, DataArguments, Templ
             logger.info(f'The {self.__class__.__name__} will be saved in: {fpath}')
             with open(fpath, 'w', encoding='utf-8') as f:
                 json.dump(check_json_format(self.__dict__), f, ensure_ascii=False, indent=2)
+            config_file = os.getenv('SWIFT_CONFIG_FILE')
+            if config_file:
+                shutil.copy(config_file, output_dir)
 
     def _init_device(self):
         if is_dist():

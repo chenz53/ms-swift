@@ -12,9 +12,9 @@ from transformers import GenerationConfig
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from swift.metrics import Metric
-from swift.model import get_model_info_meta, get_processor
+from swift.model import get_processor
 from swift.template import Template
-from swift.utils import get_logger
+from swift.utils import get_logger, safe_snapshot_download
 from .infer_engine import InferEngine
 from .protocol import (ChatCompletionResponse, ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice,
                        ChatCompletionStreamResponse, ChatMessage, DeltaMessage, EmbeddingResponse,
@@ -33,6 +33,7 @@ class SglangEngine(InferEngine):
         template: Optional[Template] = None,
         torch_dtype: Optional[torch.dtype] = None,
         model_type: Optional[str] = None,
+        template_type: Optional[str] = None,
         use_hf: Optional[bool] = None,
         hub_token: Optional[str] = None,
         revision: Optional[str] = None,
@@ -83,10 +84,15 @@ class SglangEngine(InferEngine):
         self.log_level = log_level
         if template is None:
             processor = self._get_processor()
-            template = self._get_template(processor)
+            template = self._get_template(processor, template_type=template_type)
         else:
-            get_model_info_meta(
-                model_id_or_path, hub_token=hub_token, use_hf=use_hf, revision=revision, download_model=True)
+            safe_snapshot_download(
+                model_id_or_path,
+                revision=revision,
+                download_model=True,
+                use_hf=use_hf,
+                ignore_patterns=getattr(template.model_meta, 'ignore_patterns', None),
+                hub_token=hub_token)
         super().__init__(template)
         self._prepare_server_args(engine_kwargs)
         self.engine = sgl.Engine(server_args=self.server_args)
@@ -179,7 +185,7 @@ class SglangEngine(InferEngine):
         assert output is not None
         meta_info = output['meta_info']
         usage_info = self._get_usage_info(meta_info['prompt_tokens'], meta_info['completion_tokens'])
-        response = self.template.decode(output['output_ids'])
+        response = self.template.decode(output['output_ids'], template_inputs=inputs['template_inputs'])
         toolcall = self._get_toolcall(response)
         token_ids = output['output_ids'] if return_details else None
         choice = ChatCompletionResponseChoice(
@@ -265,7 +271,7 @@ class SglangEngine(InferEngine):
         engine_inputs = {k: v for k, v in inputs.items() if k != 'template_inputs'}
         result_generator = await self.engine.async_generate(
             **engine_inputs, sampling_params=generation_config, stream=True)
-        infer_streamer = InferStreamer(self.template)
+        infer_streamer = InferStreamer(self.template, template_inputs=inputs['template_inputs'])
         async for output in result_generator:
             res = self._create_chat_completion_stream_response(output, infer_streamer)
             if res is None:
@@ -283,7 +289,7 @@ class SglangEngine(InferEngine):
         toolcall = None
         if is_finished:
             finish_reason = finish_reason['type']
-            toolcall = self._get_toolcall(self.template.decode(output['output_ids']))
+            toolcall = self._get_toolcall(self.template.decode(output['output_ids'], **infer_streamer.decode_kwargs))
         meta_info = output['meta_info']
         usage_info = self._get_usage_info(meta_info['prompt_tokens'], meta_info['completion_tokens'])
         # TODO: logprobs

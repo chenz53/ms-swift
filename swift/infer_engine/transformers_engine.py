@@ -60,6 +60,7 @@ class TransformersEngine(InferEngine):
             task_type: Optional[str] = None,
             quantization_config=None,
             model_kwargs: Optional[Dict[str, Any]] = None,
+            template_type: Optional[str] = None,
             # hub kwargs
             use_hf: Optional[bool] = None,
             revision: Optional[str] = None,
@@ -85,7 +86,7 @@ class TransformersEngine(InferEngine):
         self.hub_token = hub_token
         if isinstance(model, str):
             self.model, processor = self._get_model_processor(model, **kwargs)
-            template = self._get_template(processor)
+            template = self._get_template(processor, template_type=template_type)
         elif isinstance(model, nn.Module):
             self.model = model
             if template is None:
@@ -216,8 +217,7 @@ class TransformersEngine(InferEngine):
 
     def _infer_stream(self, inputs: Dict[str, Any], *, generation_config: GenerationConfig,
                       adapter_request: Optional[AdapterRequest], request_config: RequestConfig,
-                      **kwargs) -> Iterator[List[Optional[ChatCompletionStreamResponse]]]:
-
+                      template_inputs) -> Iterator[List[Optional[ChatCompletionStreamResponse]]]:
         if generation_config.num_beams != 1:
             error_msg = 'Streaming generation does not support beam search.'
             raise ValueError(error_msg)
@@ -247,7 +247,7 @@ class TransformersEngine(InferEngine):
         batch_size = inputs['attention_mask'].shape[0]
         all_is_finished = False
         is_finished = [False] * batch_size
-        infer_streamers = [InferStreamer(self.template) for _ in range(batch_size)]
+        infer_streamers = [InferStreamer(self.template, template_inputs=template_inputs[i]) for i in range(batch_size)]
         request_id_list = [f'chatcmpl-{random_uuid()}' for _ in range(batch_size)]
         token_idxs = [0] * batch_size
 
@@ -297,7 +297,8 @@ class TransformersEngine(InferEngine):
                 usage_info = self._get_usage_info(num_prompt_tokens, len(generate_ids))
                 toolcall = None
                 if is_finished[i]:
-                    toolcall = self._get_toolcall(self.template.decode(generate_ids))
+                    toolcall = self._get_toolcall(
+                        self.template.decode(generate_ids, template_inputs=template_inputs[i]))
                 finish_reason = self._get_finish_reason(generation_config.max_new_tokens, usage_info.completion_tokens,
                                                         is_finished[i])
 

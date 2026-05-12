@@ -17,9 +17,9 @@ from transformers.utils.versions import require_version
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
 from swift.metrics import Metric
-from swift.model import get_model_info_meta, get_processor
+from swift.model import get_processor
 from swift.template import Template
-from swift.utils import get_logger, get_seed
+from swift.utils import get_logger, get_seed, safe_snapshot_download
 from .infer_engine import InferEngine
 from .patch import patch_auto_config, patch_auto_tokenizer
 from .protocol import (ChatCompletionResponse, ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice,
@@ -44,6 +44,7 @@ class LmdeployEngine(InferEngine):
         template: Optional[Template] = None,
         torch_dtype: Optional[torch.dtype] = None,
         model_type: Optional[str] = None,
+        template_type: Optional[str] = None,
         use_hf: Optional[bool] = None,
         hub_token: Optional[str] = None,
         revision: Optional[str] = None,
@@ -70,10 +71,15 @@ class LmdeployEngine(InferEngine):
         self.devices = devices
         if template is None:
             processor = self._get_processor()
-            template = self._get_template(processor)
+            template = self._get_template(processor, template_type=template_type)
         else:
-            get_model_info_meta(
-                model_id_or_path, hub_token=hub_token, use_hf=use_hf, revision=revision, download_model=True)
+            safe_snapshot_download(
+                model_id_or_path,
+                revision=revision,
+                download_model=True,
+                use_hf=use_hf,
+                ignore_patterns=getattr(template.model_meta, 'ignore_patterns', None),
+                hub_token=hub_token)
         super().__init__(template)
 
         if self.max_model_len is not None:
@@ -196,7 +202,7 @@ class LmdeployEngine(InferEngine):
         else:
             context = self.engine.safe_run(session_id)
 
-        infer_streamer = InferStreamer(self.template)
+        infer_streamer = InferStreamer(self.template, template_inputs=inputs['template_inputs'])
         token_idx = 0
         async with context as gen:
             if version.parse(lmdeploy.__version__) < version.parse('0.6.5'):
@@ -219,7 +225,8 @@ class LmdeployEngine(InferEngine):
                 usage_info = self._get_usage_info(len(inputs['input_ids']), output.num_token)
                 toolcall = None
                 if is_finished:
-                    toolcall = self._get_toolcall(self.template.decode(output.token_ids))
+                    toolcall = self._get_toolcall(
+                        self.template.decode(output.token_ids, template_inputs=inputs['template_inputs']))
                 finish_reason = self._get_finish_reason(generation_config.max_new_tokens, output.num_token,
                                                         output.status.name == 'FINISH')
                 choices = [
@@ -254,7 +261,7 @@ class LmdeployEngine(InferEngine):
                 async for output in generator.async_stream_infer(session_id=session_id, **inputs, **kwargs):
                     pass
 
-        response = self.template.decode(output.token_ids)
+        response = self.template.decode(output.token_ids, template_inputs=inputs['template_inputs'])
         logprobs = self._get_logprobs(output.logprobs, output.token_ids, request_config.top_logprobs)
 
         usage_info = self._get_usage_info(len(inputs['input_ids']), output.num_token)

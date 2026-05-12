@@ -13,12 +13,11 @@ logger = get_logger()
 
 
 class DummyDPOTrainer(DPOTrainer):
-    # For reusing the dpo_loss function in TRL.
+    # For reusing the dpo_loss function implemented in Swift's DPOTrainer.
     def __init__(self, args):
-        from trl.trainer import FDivergenceConstants
         self.accelerator = namedtuple('Accelerator', ['device'])(device=get_current_device())
         self.f_alpha_divergence_coef = 1.
-        self.f_divergence_params = {FDivergenceConstants.ALPHA_DIVERGENCE_COEF_KEY: self.f_alpha_divergence_coef}
+        self.f_divergence_params = {'alpha_divergence_coef': self.f_alpha_divergence_coef}
         self.reference_free = args.reference_free
         self.label_smoothing = args.label_smoothing
         self.f_divergence_type = args.f_divergence_type
@@ -31,7 +30,6 @@ class MegatronDPOTrainer(MegatronRLHFTrainer):
     def __init__(self, args, template):
         super().__init__(args, template)
         self.dummy_dpo_trainer = DummyDPOTrainer(args)
-        self.ref_models = []
 
     def loss_func(self, output_tensor: torch.Tensor, *, labels: torch.Tensor, packed_seq_params):
         ref_output_tensor = output_tensor[:output_tensor.shape[0] // 2].detach()

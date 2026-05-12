@@ -13,7 +13,7 @@
 
 
 <p align="center">
-<img src="https://img.shields.io/badge/python-3.11-5be.svg">
+<img src="https://img.shields.io/badge/python-3.12-5be.svg">
 <img src="https://img.shields.io/badge/pytorch-%E2%89%A52.0-orange.svg">
 <a href="https://github.com/modelscope/modelscope/"><img src="https://img.shields.io/badge/modelscope-%E2%89%A51.23-5D91D4.svg"></a>
 <a href="https://pypi.org/project/ms-swift/"><img src="https://badge.fury.io/py/ms-swift.svg"></a>
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-<a href="https://trendshift.io/repositories/6427" target="_blank"><img src="https://trendshift.io/api/badge/repositories/6427" alt="modelscope%2Fswift | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/11937" target="_blank"><img src="https://trendshift.io/api/badge/repositories/11937" alt="modelscope/ms-swift | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </p>
 
 <p align="center">
@@ -44,17 +44,17 @@
 
 请扫描下面的二维码来加入我们的交流群：
 
-[Discord Group](https://discord.com/invite/D27yfEFVz5)              |  微信群
+[Discord Group](https://discord.gg/yeN59wxjwe)              |  微信群
 :-------------------------:|:-------------------------:
 <img src="asset/discord_qr.jpg" width="200" height="200">  |  <img src="asset/wechat.png" width="200" height="200">
 
 ## 📝 简介
-🍲 **ms-swift**是魔搭社区提供的大模型与多模态大模型微调部署框架，现已支持600+纯文本大模型与300+多模态大模型的训练（预训练、微调、人类对齐）、推理、评测、量化与部署。其中大模型包括：Qwen3、Qwen3-Next、InternLM3、GLM4.5、Mistral、DeepSeek-R1、Llama4等模型，多模态大模型包括：Qwen3-VL、Qwen3-Omni、Llava、InternVL3.5、MiniCPM-V-4、Ovis2.5、GLM4.5-V、DeepSeek-VL2等模型。
+🍲 **ms-swift**是魔搭社区提供的大模型与多模态大模型微调部署框架，现已支持600+纯文本大模型与400+多模态大模型的训练（预训练、微调、人类对齐）、推理、评测、量化与部署。其中大模型包括：Qwen3、Qwen3.5、InternLM3、GLM4.5、Mistral、DeepSeek-R1、Llama4等模型，多模态大模型包括：Qwen3-VL、Qwen3-Omni、Llava、InternVL3.5、MiniCPM-V-4、Ovis2.5、GLM4.5-V、DeepSeek-VL2等模型。
 
 🍔 除此之外，ms-swift汇集了最新的训练技术，包括集成Megatron并行技术，包括TP、PP、CP、EP等为训练提供加速，以及众多GRPO算法族强化学习的算法，包括：GRPO、DAPO、GSPO、SAPO、CISPO、RLOO、Reinforce++等提升模型智能。ms-swift支持广泛的训练任务，包括DPO、KTO、RM、CPO、SimPO、ORPO等偏好学习算法，以及Embedding、Reranker、序列分类任务。ms-swift提供了大模型训练全链路的支持，包括使用vLLM、SGLang和LMDeploy对推理、评测、部署模块提供加速，以及使用GPTQ、AWQ、BNB、FP8技术对大模型进行量化。
 
 **为什么选择ms-swift？**
-- 🍎 **模型类型**：支持**600+纯文本大模型**、**300+多模态大模型**以及All-to-All全模态模型训练到部署全流程，热门模型Day0支持。
+- 🍎 **模型类型**：支持**600+纯文本大模型**、**400+多模态大模型**以及All-to-All全模态模型训练到部署全流程，热门模型Day0支持。
 - **数据集类型**：内置150+预训练、微调、人类对齐、多模态等各种任务数据集，并支持自定义数据集，用户只需准备数据集即可一键训练。
 - **硬件支持**：支持A10/A100/H100、RTX系列、T4/V100、CPU、MPS以及国产硬件Ascend NPU等。
 - **轻量训练**：支持了LoRA、QLoRA、DoRA、LoRA+、LLaMAPro、LongLoRA、LoRA-GA、ReFT、RS-LoRA、Adapter、LISA等轻量微调方式。
@@ -64,7 +64,7 @@
 - 🍓 **多模态训练**：支持多模态packing技术提升训练速度100%+，支持文本、图像、视频和语音混合模态数据训练，支持vit/aligner/llm单独控制。
 - **Agent训练**：支持Agent template，准备一套数据集可用于不同模型的训练。
 - 🍊 **训练任务**：支持预训练和指令微调，以及DPO、GKD、KTO、RM、CPO、SimPO、ORPO等训练任务，支持**Embedding/Reranker**和序列分类任务。
-- 🥥 **Megatron并行技术**：提供TP/PP/SP/CP/ETP/EP/VPP并行策略，**MoE模型加速可达10倍**。支持250+纯文本大模型和100+多模态大模型的全参数和LoRA训练方法。支持CPT/SFT/GRPO/DPO/KTO/RM训练任务。
+- 🥥 **Megatron并行技术**：提供TP/PP/SP/CP/ETP/EP/VPP并行策略，显著提升**MoE模型训练速度**。支持300+纯文本大模型和100+多模态大模型的全参数和LoRA训练方法。支持CPT/SFT/GRPO/DPO/KTO/RM训练任务。
 - 🍉 **强化学习**：内置**丰富GRPO族算法**，包括GRPO、DAPO、GSPO、SAPO、CISPO、CHORD、RLOO、Reinforce++等，支持同步和异步vLLM引擎推理加速，可使用插件拓展奖励函数、多轮推理调度器以及环境等。
 - **全链路能力**：覆盖训练、推理、评测、量化和部署全流程。
 - **界面训练**：提供使用Web-UI界面的方式进行训练、推理、评测、量化，完成大模型的全链路。
@@ -73,13 +73,13 @@
 - **模型量化**：支持AWQ、GPTQ、FP8和BNB的量化导出，导出的模型支持使用vLLM/SGLang/LmDeploy推理加速。
 
 ## 🎉 新闻
-- 🎁 2026.01.15: **ms-swift v4.0**大版本更新进行中，建议使用稳定分支[release/3.12](https://github.com/modelscope/ms-swift/tree/release/3.12)，您的建议可以在[这个issue](https://github.com/modelscope/ms-swift/issues/7250)中反馈给我们，感谢您的支持。
+- 🎁 2026.03.03: **ms-swift v4.0**大版本正式发布，release note参考[这里](https://github.com/modelscope/ms-swift/releases/tag/v4.0.0)，您的建议可以在[这个issue](https://github.com/modelscope/ms-swift/issues/7250)中反馈给我们，感谢您的支持。
 - 🎁 2025.11.14: Megatron GRPO现已支持！查看[文档](./docs/source/Megatron-SWIFT/GRPO.md)和[示例](examples/megatron/grpo)。
 - 🎁 2025.11.04: 支持[Mcore-Bridge](docs/source/Megatron-SWIFT/Mcore-Bridge.md)，使Megatron训练像transformers一样简单易用。
 - 🎁 2025.10.28: Ray [已支持](docs/source/Instruction/Ray.md)。
 - 🎁 2025.09.07: 支持CHORD训练算法，请查看[文档](docs/source/Instruction/GRPO/AdvancedResearch/CHORD.md)。
 - 🎁 2025.09.06: Ulysses现已支持与ring-attention结合使用，使得输入序列可以被切分成任意数量的块（不再受限于num_heads），命令参数仍然是`--sequence_parallel_size N`。
-- 🎁 2025.09.02: Megatron-SWIFT支持多模态模型训练。文档参考[这里](./docs/source/Megatron-SWIFT/Mcore-Bridge.md)。
+- 🎁 2025.09.02: Megatron-SWIFT支持多模态模型训练。文档参考[这里](./docs/source/Megatron-SWIFT/Multimodal-Model.md)。
 - 🎁 2025.08.12: 支持在SFT训练中使用[Dynamic Fine-Tuning](https://arxiv.org/abs/2508.05629)(DFT)，使用参数 `--enable_dft_loss true`。训练脚本参考[这里](https://github.com/modelscope/ms-swift/blob/main/examples/train/full/dft.sh)
 - 🎁 2025.07.09: Megatron-SWIFT支持LoRA训练。相比ms-swift，在MoE模型提速显著。训练脚本参考[这里](https://github.com/modelscope/ms-swift/blob/main/examples/megatron/lora)。
 - 🎁 2025.06.23: 支持Reranker模型训练，训练脚本参考[这里](https://github.com/modelscope/ms-swift/blob/main/examples/train/reranker/train_reranker.sh)。
@@ -110,6 +110,10 @@
 使用pip进行安装：
 ```shell
 pip install ms-swift -U
+
+# 使用uv
+pip install uv
+uv pip install ms-swift -U --torch-backend=auto
 ```
 
 从源代码安装：
@@ -121,24 +125,27 @@ cd ms-swift
 # main分支为swift4.x。若安装swift3.x，请运行以下命令
 # git checkout release/3.12
 pip install -e .
+
+# 使用uv
+uv pip install -e . --torch-backend=auto
 ```
 
 运行环境：
 
 |              | 范围           | 推荐                  | 备注                 |
 |--------------|--------------|---------------------|--------------------|
-| python       | >=3.9        | 3.10/3.11            |                    |
-| cuda         |              | cuda12              | 使用cpu、npu、mps则无需安装 |
-| torch        | >=2.0        | 2.8.0/2.9.1           |                    |
-| transformers | >=4.33       | 4.57.6              |                    |
+| python       | >=3.10        | 3.12            |                    |
+| cuda         |              | cuda12.8/13.0       | 使用cpu、npu、mps则无需安装 |
+| torch        | >=2.0        | 2.8.0/2.11.0         |                    |
+| transformers | >=4.33       | 4.57.6/5.8.0        |                    |
 | modelscope   | >=1.23       |                     |                    |
-| peft         | >=0.11,<0.19 |                     |                    |
-| flash_attn   |              | 2.8.3/3.0.0b1 |                    |
-| trl          | >=0.15,<0.29 | 0.28.0              | RLHF               |
-| deepspeed    | >=0.14       | 0.18.6              | 训练                 |
-| vllm         | >=0.5.1      | 0.11.0/0.15.1        | 推理/部署              |
+| datasets     | >=3.0,<4.8.5 | 3.6.0/4.8.4         |                    |
+| peft         | >=0.11,<0.20 |                     |                    |
+| flash_attn   |              | 2.8.3/4.0.0b12 |                    |
+| trl          | >=0.15,<1.0 | 0.29.1              | RLHF               |
+| deepspeed    | >=0.14       | 0.18.9              | 训练                 |
+| vllm         | >=0.5.1      | 0.11.0/0.20.1        | 推理/部署              |
 | sglang       | >=0.4.6      |          | 推理/部署              |
-| lmdeploy     | >=0.5   | 0.10.1                 | 推理/部署              |
 | evalscope    | >=1.0       |                     | 评测                 |
 | gradio       |              | 5.32.1              | Web-UI/App         |
 
@@ -147,14 +154,14 @@ pip install -e .
 
 ## 🚀 快速开始
 
-**10分钟**在单卡3090上对Qwen2.5-7B-Instruct进行自我认知微调：
+**10分钟**在单卡3090上对Qwen3-4B-Instruct-2507进行自我认知微调：
 
 ### 命令行（推荐）
 ```shell
-# 22GB
+# 13GB
 CUDA_VISIBLE_DEVICES=0 \
 swift sft \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --tuner_type lora \
     --dataset 'AI-ModelScope/alpaca-gpt4-data-zh#500' \
               'AI-ModelScope/alpaca-gpt4-data-en#500' \
@@ -174,7 +181,6 @@ swift sft \
     --logging_steps 5 \
     --max_length 2048 \
     --output_dir output \
-    --system 'You are a helpful assistant.' \
     --warmup_ratio 0.05 \
     --dataloader_num_workers 4 \
     --model_author swift \
@@ -185,7 +191,7 @@ swift sft \
 - 如果要使用自定义数据集进行训练，你可以参考[这里](https://swift.readthedocs.io/zh-cn/latest/Customization/Custom-dataset.html)组织数据集格式，并指定`--dataset <dataset_path>`。
 - `--model_author`和`--model_name`参数只有当数据集中包含`swift/self-cognition`时才生效。
 - 如果要使用其他模型进行训练，你只需要修改`--model <model_id/model_path>`即可。
-- 默认使用ModelScope进行模型和数据集的下载。如果要使用HuggingFace，指定`--use_hf true`即可。
+- 默认使用**ModelScope**进行模型和数据集的下载。如果要使用HuggingFace，指定`--use_hf true`即可。
 
 训练完成后，使用以下命令对训练后的权重进行推理：
 - 这里的`--adapters`需要替换成训练生成的last checkpoint文件夹。由于adapters文件夹中包含了训练的参数文件`args.json`，因此不需要额外指定`--model`，`--system`，swift会自动读取这些参数。如果要关闭此行为，可以设置`--load_args false`。
@@ -317,7 +323,7 @@ print(f'response: {resp_list[0].choices[0].message.content}')
 NPROC_PER_NODE=8 \
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
 swift pt \
-    --model Qwen/Qwen2.5-7B \
+    --model Qwen/Qwen3-4B-Base \
     --dataset swift/chinese-c4 \
     --streaming true \
     --tuner_type full \
@@ -330,7 +336,7 @@ swift pt \
 微调：
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift sft \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --dataset AI-ModelScope/alpaca-gpt4-data-zh \
     --tuner_type lora \
     --output_dir output \
@@ -341,7 +347,7 @@ RLHF：
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift rlhf \
     --rlhf_type dpo \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --dataset hjh0119/shareAI-Llama3-DPO-zh-en-emoji \
     --tuner_type lora \
     --output_dir output \
@@ -357,6 +363,7 @@ ms-swift支持使用Megatron并行技术加速训练，包括大规模集群训�
 | 预训练 | ✅ | ✅| ✅ | ✅ | ✅ |
 | [指令监督微调](https://github.com/modelscope/ms-swift/tree/main/examples/megatron) | ✅ | ✅| ✅ | ✅ | ✅ |
 | [GRPO](https://github.com/modelscope/ms-swift/tree/main/examples/megatron/grpo) | ✅ | ✅| ✅ | ✅ | ✅ |
+| [GKD](https://github.com/modelscope/ms-swift/tree/main/examples/megatron/rlhf/gkd) | ✅ | ✅| ✅ | ✅ | ✅ |
 | [DPO](https://github.com/modelscope/ms-swift/tree/main/examples/megatron/rlhf/dpo) | ✅ | ✅| ✅ | ✅ | ✅ |
 | [KTO](https://github.com/modelscope/ms-swift/tree/main/examples/megatron/rlhf/kto) | ✅ | ✅| ✅ | ✅ | ✅ |
 | [RM](https://github.com/modelscope/ms-swift/tree/main/examples/megatron/rlhf/rm) | ✅ | ✅| ✅ | ✅ | ✅ |
@@ -367,7 +374,7 @@ ms-swift支持使用Megatron并行技术加速训练，包括大规模集群训�
 
 ```shell
 NPROC_PER_NODE=2 CUDA_VISIBLE_DEVICES=0,1 megatron sft \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --save_safetensors true \
     --dataset AI-ModelScope/alpaca-gpt4-data-zh \
     --tuner_type lora \
@@ -394,7 +401,7 @@ ms-swift支持丰富GRPO族算法：
 CUDA_VISIBLE_DEVICES=0,1,2,3 NPROC_PER_NODE=4 \
 swift rlhf \
     --rlhf_type grpo \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --tuner_type lora \
     --use_vllm true \
     --vllm_mode colocate \
@@ -406,25 +413,16 @@ swift rlhf \
 ### 推理
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift infer \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --stream true \
     --infer_backend transformers \
-    --max_new_tokens 2048
-
-# LoRA
-CUDA_VISIBLE_DEVICES=0 swift infer \
-    --model Qwen/Qwen2.5-7B-Instruct \
-    --adapters swift/test_lora \
-    --stream true \
-    --infer_backend transformers \
-    --temperature 0 \
     --max_new_tokens 2048
 ```
 
 ### 界面推理
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift app \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --stream true \
     --infer_backend transformers \
     --max_new_tokens 2048 \
@@ -434,14 +432,14 @@ CUDA_VISIBLE_DEVICES=0 swift app \
 ### 部署
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift deploy \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --infer_backend vllm
 ```
 
 ### 采样
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift sample \
-    --model LLM-Research/Meta-Llama-3.1-8B-Instruct \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
     --sampler_engine transformers \
     --num_return_sequences 5 \
     --dataset AI-ModelScope/alpaca-gpt4-data-zh#5
@@ -450,8 +448,8 @@ CUDA_VISIBLE_DEVICES=0 swift sample \
 ### 评测
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift eval \
-    --model Qwen/Qwen2.5-7B-Instruct \
-    --infer_backend lmdeploy \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
+    --infer_backend sglang \
     --eval_backend OpenCompass \
     --eval_dataset ARC_c
 ```
@@ -459,10 +457,10 @@ CUDA_VISIBLE_DEVICES=0 swift eval \
 ### 量化
 ```shell
 CUDA_VISIBLE_DEVICES=0 swift export \
-    --model Qwen/Qwen2.5-7B-Instruct \
-    --quant_bits 4 --quant_method awq \
+    --model Qwen/Qwen3-4B-Instruct-2507 \
+    --quant_method fp8 \
     --dataset AI-ModelScope/alpaca-gpt4-data-zh \
-    --output_dir Qwen2.5-7B-Instruct-AWQ
+    --output_dir Qwen3-4B-Instruct-2507-FP8
 ```
 
 ### 推送模型
@@ -477,7 +475,7 @@ swift export \
 
 ## 🏛 License
 
-本框架使用[Apache License (Version 2.0)](https://github.com/modelscope/modelscope/blob/master/LICENSE)进行许可。模型和数据集请查看原资源页面并遵守对应License。
+本框架使用[Apache License (Version 2.0)](https://github.com/modelscope/ms-swift/blob/master/LICENSE)进行许可。模型和数据集请查看原资源页面并遵守对应License。
 
 ## 📎 引用
 
@@ -495,4 +493,4 @@ swift export \
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=modelscope/swift&type=Date)](https://star-history.com/#modelscope/ms-swift&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=modelscope/ms-swift&type=Date)](https://star-history.com/#modelscope/ms-swift&Date)
