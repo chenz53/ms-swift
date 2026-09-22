@@ -5,23 +5,13 @@ from torch.distributed.fsdp import FSDPModule as FSDP2
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from transformers.trainer_callback import TrainerControl, TrainerState
 from transformers.training_args import TrainingArguments
+from transformers.utils import is_torch_npu_available
 from typing import Any, Optional
 
 from swift.utils import get_logger
 from .base import TrainerCallback
 
 logger = get_logger()
-
-
-def is_torch_npu_available() -> bool:
-    """Check the availability of NPU"""
-    try:
-        if hasattr(torch, 'npu') and callable(getattr(torch.npu, 'is_available', None)):
-            return torch.npu.is_available()
-        return False
-    except ImportError:
-        return False
-
 
 is_cuda_available = torch.cuda.is_available()
 is_npu_available = is_torch_npu_available()
@@ -520,10 +510,13 @@ class ActivationHandler:
 
         @functools.wraps(orig_method)
         def wrapped_method(model_self, *args, **kwargs):
+            if not model_self.training or not torch.is_grad_enabled():
+                return orig_method(*args, **kwargs)
             handler.pre_forward(model_self)
-            out = handler.forward(model_self, orig_method, *args, **kwargs)
-            handler.post_forward(model_self)
-            return out
+            try:
+                return handler.forward(model_self, orig_method, *args, **kwargs)
+            finally:
+                handler.post_forward(model_self)
 
         module.forward = wrapped_method.__get__(module, type(module))
 

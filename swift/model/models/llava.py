@@ -9,6 +9,7 @@ from swift.utils import git_clone_github, safe_snapshot_download
 from ..constant import MLLMModelType
 from ..model_arch import ModelArch
 from ..model_meta import Model, ModelGroup, ModelMeta
+from ..patcher import patch_get_input_embeddings
 from ..register import ModelLoader, register_model
 
 
@@ -429,7 +430,9 @@ class LlavaOnevisionLoader(ModelLoader):
         model_cls = get_class_from_dynamic_module(
             'modeling_llavaonevision1_5.LLaVAOneVision1_5_ForConditionalGeneration', model_dir)
         model_cls._no_split_modules = ['LLaVAOneVision1_5_DecoderLayer', 'RiceBlock']
-        return super().get_model(model_dir, *args, **kwargs)
+        model = super().get_model(model_dir, *args, **kwargs)
+        patch_get_input_embeddings(model.visual, 'patch_embed')
+        return model
 
 
 register_model(
@@ -449,4 +452,38 @@ register_model(
         model_arch=ModelArch.llava_onevision1_5,
         requires=['transformers>=4.53.0', 'qwen_vl_utils'],
         tags=['vision'],
+    ))
+
+
+class LlavaOnevision2Loader(ModelLoader):
+    """Loader for LLaVA-OneVision-2 (Qwen3 backbone + OneVision encoder).
+
+    Reuses LlavaOnevisionLoader's pattern: trust_remote_code auto_map,
+    patch vision tower's get_input_embeddings for tuner compatibility.
+    The model class (LlavaOnevision2ForConditionalGeneration) already
+    defines _no_split_modules, so we only set auto_model_cls and patch.
+    """
+
+    def get_model(self, model_dir: str, *args, **kwargs) -> PreTrainedModel:
+        from transformers import AutoModelForImageTextToText
+        self.auto_model_cls = self.auto_model_cls or AutoModelForImageTextToText
+        model = super().get_model(model_dir, *args, **kwargs)
+        patch_get_input_embeddings(model.visual, 'embeddings.patch_embedding')
+        return model
+
+
+register_model(
+    ModelMeta(
+        MLLMModelType.llava_onevision2,
+        [
+            ModelGroup([
+                Model('lmms-lab/LLaVA-OneVision-2-8B-Instruct', 'lmms-lab/LLaVA-OneVision-2-8B-Instruct'),
+            ], ),
+        ],
+        LlavaOnevision2Loader,
+        template=TemplateType.llava_onevision2,
+        architectures=['LlavaOnevision2ForConditionalGeneration'],
+        model_arch=ModelArch.llava_onevision1_5,
+        requires=['transformers>=5.0', 'qwen_vl_utils'],
+        tags=['vision', 'video'],
     ))

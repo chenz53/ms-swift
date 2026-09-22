@@ -90,6 +90,7 @@ class LLMModelType:
 
     ling = 'ling'
     bailing_moe = 'bailing_moe'
+    bailing_hybrid = 'bailing_hybrid'
     yuan2 = 'yuan2'
     orion = 'orion'
     xverse = 'xverse'
@@ -100,6 +101,7 @@ class LLMModelType:
     dbrx = 'dbrx'
     grok = 'grok'
     mamba = 'mamba'
+    nemotron_h = 'nemotron_h'
     polylm = 'polylm'
     aya = 'aya'
     mimo = 'mimo'
@@ -113,6 +115,7 @@ class LLMModelType:
     longchat = 'longchat'
     iquestcoder = 'iquestcoder'
     youtu_llm = 'youtu_llm'
+    spark2_5 = 'spark2_5'
 
     modern_bert_gte_reranker = 'modern_bert_gte_reranker'
     bge_reranker = 'bge_reranker'
@@ -135,6 +138,7 @@ class RMModelType:
 
 
 class MLLMModelType:
+    moss_vl = 'moss_vl'
     qwen_vl = 'qwen_vl'
     qwen_audio = 'qwen_audio'
     qwen2_vl = 'qwen2_vl'
@@ -143,22 +147,28 @@ class MLLMModelType:
     qwen3_omni_moe = 'qwen3_omni_moe'
     qwen2_audio = 'qwen2_audio'
     qwen3_asr = 'qwen3_asr'
+    qwen3_tts = 'qwen3_tts'
     qwen3_vl = 'qwen3_vl'
     qwen3_vl_moe = 'qwen3_vl_moe'
     qwen3_vl_emb = 'qwen3_vl_emb'
     qwen3_vl_reranker = 'qwen3_vl_reranker'
     qwen3_5 = 'qwen3_5'
     qwen3_5_moe = 'qwen3_5_moe'
+    qwen3_5_emb = 'qwen3_5_emb'
+    wemm_embedding = 'wemm_embedding'
+    qwen4_exp = 'qwen4_exp'
 
     qwen2_gme = 'qwen2_gme'
     ovis1_6 = 'ovis1_6'
     ovis2 = 'ovis2'
     ovis2_5 = 'ovis2_5'
+    ovis_ocr2 = 'ovis_ocr2'
     midashenglm = 'midashenglm'
 
     chatglm4v = 'chatglm4v'
     glm4v = 'glm4v'
     glm4v_moe = 'glm4v_moe'
+    glm5_next = 'glm5_next'
     glm_edge_v = 'glm_edge_v'
     glm_ocr = 'glm_ocr'
     cogvlm = 'cogvlm'
@@ -199,13 +209,16 @@ class MLLMModelType:
     llava_next_qwen = 'llava_next_qwen'
     llama3_llava_next = 'llama3_llava_next'
     llava_onevision1_5 = 'llava_onevision1_5'
+    llava_onevision2 = 'llava_onevision2'
 
+    deepseek_v41 = 'deepseek_v41'
     deepseek_vl = 'deepseek_vl'
     deepseek_vl2 = 'deepseek_vl2'
     deepseek_janus = 'deepseek_janus'
     deepseek_janus_pro = 'deepseek_janus_pro'
     deepseek_ocr = 'deepseek_ocr'
     deepseek_ocr2 = 'deepseek_ocr2'
+    unlimited_ocr = 'unlimited_ocr'
 
     minicpmv = 'minicpmv'
     minicpmv2_5 = 'minicpmv2_5'
@@ -216,6 +229,7 @@ class MLLMModelType:
     minicpmo = 'minicpmo'
 
     minimax_vl = 'minimax_vl'
+    minimax_m3_vl = 'minimax_m3_vl'
 
     mplug_owl2 = 'mplug_owl2'
     mplug_owl2_1 = 'mplug_owl2_1'
@@ -231,10 +245,12 @@ class MLLMModelType:
     step_audio2_mini = 'step_audio2_mini'
     kimi_vl = 'kimi_vl'
     kimi_k25 = 'kimi_k25'
+    kimi_k3 = 'kimi_k3'
     keye_vl = 'keye_vl'
     keye_vl_1_5 = 'keye_vl_1_5'
     dots_ocr = 'dots_ocr'
     sail_vl2 = 'sail_vl2'
+    mimo_v2 = 'mimo_v2'
 
     phi3_vision = 'phi3_vision'
     phi4_multimodal = 'phi4_multimodal'
@@ -250,14 +266,18 @@ class MLLMModelType:
     gemma3_vision = 'gemma3_vision'
     gemma3n = 'gemma3n'
     gemma4 = 'gemma4'
+    gemma4_unified = 'gemma4_unified'
+    diffusion_gemma = 'diffusion_gemma'
     mistral3 = 'mistral3'
     mistral3_2506 = 'mistral3_2506'
     paddle_ocr = 'paddle_ocr'
-    paddle_ocr_1_5 = 'paddle_ocr_1_5'
+    paddleocr_vl = 'paddleocr_vl'
     hunyuan_ocr = 'hunyuan_ocr'
     step3_vl = 'step3_vl'
+    muse_glimmer = 'muse_glimmer'
 
     jina_reranker_m0 = 'jina_reranker_m0'
+    monkeyocrv2 = 'monkeyocrv2'
 
 
 class ModelType(LLMModelType, MLLMModelType, BertModelType, RMModelType):

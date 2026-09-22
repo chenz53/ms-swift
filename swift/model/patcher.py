@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import transformers
 from accelerate.utils import find_device
+from collections.abc import Mapping
 from contextlib import contextmanager
 from functools import wraps
 from packaging import version
@@ -24,6 +25,40 @@ from swift.utils import (HfConfigFactory, deep_getattr, get_device_count, get_di
                          to_float_dtype)
 
 logger = get_logger()
+
+transformers_version = version.parse(transformers.__version__)
+transformers_5 = transformers_version >= version.parse('5.0.0')
+
+
+def patch_frozen_module(module: nn.Module):
+    """Avoid input-grad hooks retaining a graph for a fully frozen encoder.
+
+    Keep autograd when any parameter or input needs gradients, including after
+    unfreezing the encoder. Do not remove hooks needed by trainable adapters.
+    """
+    if hasattr(module, '_swift_frozen_module_forward'):
+        return
+    module._swift_frozen_module_forward = module.forward
+
+    def needs_input_grad(value):
+        if isinstance(value, torch.Tensor):
+            return value.requires_grad
+        if isinstance(value, Mapping):
+            return any(needs_input_grad(v) for v in value.values())
+        if isinstance(value, (tuple, list)):
+            return any(needs_input_grad(v) for v in value)
+        # Unknown containers may carry differentiable tensors: leave them alone.
+        return not isinstance(value, (type(None), bool, int, float, str, torch.dtype, torch.device))
+
+    @wraps(module.forward)
+    def frozen_forward(self, *args, **kwargs):
+        requires_grad = torch.is_grad_enabled()
+        if requires_grad:
+            requires_grad = any(p.requires_grad for p in self.parameters()) or needs_input_grad((args, kwargs))
+        with torch.set_grad_enabled(requires_grad):
+            return self._swift_frozen_module_forward(*args, **kwargs)
+
+    module.forward = MethodType(frozen_forward, module)
 
 
 def patch_fixed_float_dtype(module: torch.nn.Module, dtype):
@@ -116,21 +151,7 @@ def patch_output_to_input_device(module: torch.nn.Module):
 @contextmanager
 def patch_device_map():
 
-    def _ensure_no_split_modules():
-
-        def _all_subclasses(cls):
-            results = []
-            for sub in cls.__subclasses__():
-                results.append(sub)
-                results.extend(_all_subclasses(sub))
-            return results
-
-        for module in _all_subclasses(PreTrainedModel):
-            if getattr(module, '_no_split_modules', None) is None:
-                module._no_split_modules = []
-
     if not hasattr(PreTrainedModel, '_get_no_split_modules'):
-        _ensure_no_split_modules()
         yield
         return
 
@@ -463,7 +484,12 @@ def patch_mp_ddp():
         return
     _mp_ddp_patched = True
     if is_mp_ddp():
-        from accelerate.utils.modeling import get_balanced_memory, infer_auto_device_map
+        if transformers_5:
+            from transformers.integrations import accelerate as tf_accelerate
+            get_balanced_memory = tf_accelerate.get_balanced_memory
+            infer_auto_device_map = tf_accelerate.infer_auto_device_map
+        else:
+            from accelerate.utils.modeling import get_balanced_memory, infer_auto_device_map
 
         @wraps(infer_auto_device_map)
         def _infer_auto_device_map_patch(model: nn.Module,
@@ -484,9 +510,11 @@ def patch_mp_ddp():
         _old_ddp_init = DDP.__init__
         accelerate.accelerator.torch.nn.parallel.DistributedDataParallel.__init__ = (
             lambda self, model, device_ids, output_device, *args, **kwargs: _old_ddp_init(self, model, *args, **kwargs))
-        transformers.modeling_utils.get_balanced_memory = lambda *args, **kwargs: {}
-        transformers.modeling_utils.infer_auto_device_map = _infer_auto_device_map_patch
-
+        if transformers_5:
+            tf_accelerate.infer_auto_device_map = _infer_auto_device_map_patch
+        else:
+            transformers.modeling_utils.infer_auto_device_map = _infer_auto_device_map_patch
+            transformers.modeling_utils.get_balanced_memory = lambda *args, **kwargs: {}
         _old_accelerator_init = trainer.Accelerator.__init__
         trainer.Accelerator.__init__ = (lambda self, device_placement=False, *args, **kwargs: _old_accelerator_init(
             self, device_placement=device_placement, *args, **kwargs))
@@ -510,8 +538,7 @@ def patch_get_dynamic_module():
 
 @contextmanager
 def patch_tp_plan(load_model: bool):
-    if not load_model or not is_mp() or version.parse(
-            transformers.__version__) < version.parse('4.50') or 'WORLD_SIZE' not in os.environ:
+    if not load_model or not is_mp() or transformers_version < version.parse('4.50') or 'WORLD_SIZE' not in os.environ:
         yield
         return
     logger.info_once('Patch tp_plan.')
@@ -545,7 +572,9 @@ def revert_padding_free(outputs: Dict[str, Any], inputs: Dict[str, Any], padding
 
     seq_lengths = []
     pos = position_ids[0]
-    resets = torch.where(pos[1:] < pos[:-1])[0] + 1
+    # A length-1 sequence contributes a lone 0, so equality marks a boundary as well. The -1 slots
+    # padded by sequence parallel belong to no sequence and must not open one.
+    resets = torch.where((pos[1:] <= pos[:-1]) & (pos[1:] >= 0))[0] + 1
 
     if len(resets) == 0:
         # Only one sequence in this batch item
@@ -556,7 +585,7 @@ def revert_padding_free(outputs: Dict[str, Any], inputs: Dict[str, Any], padding
         for end in resets:
             seq_lengths.append(end - start)
             start = end
-        seq_lengths.append(pos.shape[0] - start)
+        seq_lengths.append(int((pos >= 0).sum()) - start)
 
     max_length = max(seq_lengths)
     unpacked_logits = []
@@ -598,6 +627,8 @@ def gather_sequence_parallel_outputs(
     for key in tensor_keys:
         if key in outputs:
             outputs[key] = GatherTensor.apply(outputs[key], 1, position_ids)
+            if position_ids is not None:
+                outputs[key] = outputs[key][:, position_ids[0] >= 0]
 
     return outputs
 

@@ -1,11 +1,16 @@
 # Copyright (c) ModelScope Contributors. All rights reserved.
+import hashlib
+import importlib.util
 import os
 import requests
-from modelscope.hub.api import ModelScopeConfig
+import tempfile
+from modelscope.hub.api import HubApi, ModelScopeConfig
 from modelscope.hub.utils.utils import get_cache_dir
+from pathlib import Path
 from tqdm import tqdm
 from typing import List, Optional
 
+from .env import use_hf_hub
 from .logger import get_logger
 from .torch_utils import is_local_master, safe_ddp_context
 from .utils import subprocess_run
@@ -76,7 +81,7 @@ def safe_snapshot_download(model_id_or_path: str,
             '*.ot', '*.h5'
         ]
     if not download_model:
-        ignore_patterns += ['*.bin', '*.safetensors']
+        ignore_patterns = [*ignore_patterns, '*.bin', '*.safetensors']
     hub = get_hub(use_hf)
     if model_id_or_path.startswith('~'):
         model_id_or_path = os.path.abspath(os.path.expanduser(model_id_or_path))
@@ -151,7 +156,109 @@ def git_clone_github(github_url: str,
 def download_ms_file(url: str, local_path: str, cookies=None) -> None:
     if cookies is None:
         cookies = ModelScopeConfig.get_cookies()
-    resp = requests.get(url, cookies=cookies, stream=True)
-    with open(local_path, 'wb') as f:
-        for data in tqdm(resp.iter_lines()):
-            f.write(data)
+    with requests.get(url, cookies=cookies, stream=True) as resp:
+        resp.raise_for_status()
+        total_size = int(resp.headers.get('content-length', 0))
+        with open(local_path, 'wb') as f, tqdm(
+                total=total_size, unit='B', unit_scale=True, unit_divisor=1024,
+                desc=os.path.basename(local_path)) as pbar:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+                pbar.update(len(chunk))
+
+
+def _resolve_kernel_variant_str(repo_id: str) -> Optional[str]:
+    """Resolve the kernel build variant matching the current torch/cuda/platform
+    by listing the ``build/`` folder of the ModelScope kernel repository. Returns
+    ``None`` if listing or parsing fails (caller should fall back to downloading
+    the whole repo).
+    """
+    try:
+        from kernels.variants import parse_variant, resolve_variant
+        files = HubApi().get_model_files(repo_id, root='build', recursive=False)
+        variants = []
+        for f in files:
+            name = f.get('Name') or f.get('Path', '').rsplit('/', 1)[-1]
+            if not name:
+                continue
+            try:
+                variants.append(parse_variant(name))
+            except ValueError:
+                continue
+        variant = resolve_variant(variants)
+        return variant.variant_str if variant else None
+    except Exception:
+        return None
+
+
+def patch_kernels() -> bool:
+    """Install a process-wide monkey patch on
+    ``transformers.integrations.hub_kernels.get_kernel`` so that kernel
+    repositories are downloaded from ModelScope and loaded via
+    ``kernels.get_local_kernel``.
+
+    The runtime behavior is controlled by the ``USE_HF`` env (read on each
+    ``get_kernel`` call):
+        - ``USE_HF=1``: fall back to the original HuggingFace-based loading.
+        - otherwise (default): use ModelScope.
+
+    Returns True if the patch was installed, False if skipped (``kernels`` not
+    installed, or the ``transformers`` integration is unavailable). Callers are
+    expected to guarantee idempotency (e.g. via a module-level flag).
+    """
+    if importlib.util.find_spec('kernels') is None:
+        return False
+    try:
+        from kernels import get_local_kernel
+        from transformers.integrations import hub_kernels
+    except ImportError:
+        return False
+
+    origin_get_kernel = hub_kernels.get_kernel
+
+    def patched_get_kernel(repo_id, *args, **kwargs):
+        if use_hf_hub():
+            return origin_get_kernel(repo_id, *args, **kwargs)
+        try:
+            variant_str = _resolve_kernel_variant_str(repo_id)
+            allow_patterns = [f'build/{variant_str}/*'] if variant_str else None
+            model_dir = safe_snapshot_download(repo_id, use_hf=False, allow_patterns=allow_patterns)
+            package_name = repo_id.split('/')[-1].replace('-', '_')
+            # kernels < 0.14
+            kernel = get_local_kernel(Path(model_dir), package_name)
+            logger.info(f'Loaded kernel `{repo_id}` from ModelScope: {model_dir}')
+            return kernel
+        except Exception as e:
+            logger.warning(f'Failed to load kernel `{repo_id}` from ModelScope ({e}), fallback to HuggingFace.')
+            return origin_get_kernel(repo_id, *args, **kwargs)
+
+    hub_kernels.get_kernel = patched_get_kernel
+    return True
+
+
+def download_file(url: str) -> str:
+    url = url.rstrip('/')
+    file_name = url.rsplit('/', 1)[-1]
+    file_stem, file_suffix = os.path.splitext(file_name)
+    file_name = f'{file_stem}-{hashlib.sha256(url.encode("utf-8")).hexdigest()}{file_suffix}'
+    cache_dir = os.path.join(get_cache_dir(), 'files')
+    os.makedirs(cache_dir, exist_ok=True)
+    file_path = os.path.join(cache_dir, file_name)
+    if os.path.exists(file_path):
+        return file_path
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=cache_dir, prefix=f'.{file_name}.', suffix='.tmp', delete=False) as f:
+            temp_path = f.name
+            with requests.get(url, stream=True) as resp:
+                resp.raise_for_status()
+                total_size = int(resp.headers.get('content-length', 0))
+                with tqdm(total=total_size, unit='B', unit_scale=True, unit_divisor=1024, desc=file_name) as pbar:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                        pbar.update(len(chunk))
+        os.replace(temp_path, file_path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+    return file_path
